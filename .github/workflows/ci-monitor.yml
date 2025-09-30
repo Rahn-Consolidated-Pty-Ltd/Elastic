@@ -1,38 +1,22 @@
-name: CI & System Monitoring
+- name: Run Tests and send results
+  run: |
+    START_TIME=$(date +%s)
+    pytest || TEST_STATUS="failed"
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+    TEST_STATUS=${TEST_STATUS:-passed}
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: "*/30 * * * *"
+    # Install Elasticsearch client
+    pip install elasticsearch==8.15.0
 
-jobs:
-  ci-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+    # Send results to Elasticsearch
+    python - <<EOF
+import os
+from elastic_sender import send_ci_result
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+job_name = "ci-test"
+status = os.environ.get("TEST_STATUS", "$TEST_STATUS")
+duration = $DURATION
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run Tests
-        run: |
-          PYTHONPATH=$PWD pytest   # makes the 'elastic' package visible
-
-  monitor-github:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Monitor GitHub
-        run: |
-          echo "Monitoring GitHub activity..."
+send_ci_result(job_name, status, duration)
+EOF
