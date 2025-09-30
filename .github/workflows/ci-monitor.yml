@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "*/30 * * * *" # runs every 30 minutes
+    - cron: "*/30 * * * *"
 
 jobs:
   ci-test:
@@ -25,7 +25,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Tests
-        run: pytest
+        run: |
+          PYTHONPATH=$PWD pytest   # makes the 'elastic' package visible
 
   monitor-github:
     runs-on: ubuntu-latest
